@@ -3,13 +3,11 @@
 import os
 
 import nibabel as nib
-import numpy as np
 import pandas as pd
 import requests
 from nimare.dataset import Dataset
 from nimare.io import DEFAULT_MAP_TYPE_CONVERSION
 from nimare.transforms import ImageTransformer
-from scipy.stats import pearsonr
 
 
 def download_images(image_ids, output_directory):
@@ -57,49 +55,6 @@ def download_images(image_ids, output_directory):
             )
 
     return pd.DataFrame(image_info_dict)
-
-
-def _rm_nonstat_maps(data_df):
-    """
-    Remove non-statistical maps from a dataset.
-
-    Notes
-    -----
-    This function requires the dataset to have a metadata field called
-    "image_name" and "image_file".
-    """
-    sel_ids = []
-    for _, row in data_df.iterrows():
-        image_name = row["name"].lower()
-        file_name = row["file"].lower()
-
-        exclude = False
-        for term in [
-            "ica",
-            "pca",
-            "ppi",
-            "seed",
-            "functional connectivity",
-            "correlation",
-        ]:
-            if term in image_name:
-                exclude = True
-                break
-
-        if "cope" in file_name and (
-            "zstat" not in file_name and "tstat" not in file_name
-        ):
-            exclude = True
-
-        if "tfce" in file_name:
-            exclude = True
-
-        if not exclude:
-            sel_ids.append(row["id"])
-
-    data_df = data_df[data_df["id"].isin(sel_ids)]
-    data_df = data_df.reset_index()
-    return data_df
 
 
 def convert_to_nimare_dataset(images_df):
