@@ -31,7 +31,7 @@ def _rm_nonstat_maps(data_df, verbose=0):
             if term in image_name:
                 exclude = True
                 if verbose > 0:
-                    print(f"Removing {row["id"]}, term {term} in image name")
+                    print(f"Removing {row['id']}, term {term} in image name")
                 break
 
         if "cope" in file_name and (
@@ -39,11 +39,11 @@ def _rm_nonstat_maps(data_df, verbose=0):
         ):
             exclude = True
             if verbose > 0:
-                print(f"Removing {row["id"]}, term 'cope' in file name")
+                print(f"Removing {row['id']}, term 'cope' in file name")
 
         if "tfce" in file_name:
             if verbose > 0:
-                print(f"Removing {row["id"]}, term 'tfce' in file name")
+                print(f"Removing {row['id']}, term 'tfce' in file name")
             exclude = True
 
         if not exclude:
@@ -66,14 +66,14 @@ def _rm_extreme_maps(data_df, zmin=1.96, z_max=50, verbose=0):
         if max_val < zmin and min_val > -zmin:
             outliers_ids.append(row["id"])
             if verbose > 0:
-                print(f"Removing {row["id"]}, possible effect size or correlation map")
+                print(f"Removing {row['id']}, possible effect size or correlation map")
             continue
 
         # Catch any map with extreme values
         if max_val > z_max or min_val < -z_max:
             outliers_ids.append(row["id"])
             if verbose > 0:
-                print(f"Removing {row["id"]}, possible map with extreme values")
+                print(f"Removing {row['id']}, possible map with extreme values")
             continue
 
         # Catch any map with all positive or all negative values
@@ -81,7 +81,7 @@ def _rm_extreme_maps(data_df, zmin=1.96, z_max=50, verbose=0):
             outliers_ids.append(row["id"])
             if verbose > 0:
                 print(
-                    f"Removing {row["id"]}, map with all positive or all negative values"
+                    f"Removing {row['id']}, map with all positive or all negative values"
                 )
             continue
 
