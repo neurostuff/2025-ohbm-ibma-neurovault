@@ -1,7 +1,5 @@
 # 2025-ohbm-ibma-neurovault
 
-[![Binder Backup](https://img.shields.io/badge/launch-backup--binder-orange.svg)](https://binder.conp.cloud/v2/gh/neurostuff/ohbm2021-nimare-tutorial/main?filepath=notebooks%2Ftutorial.ipynb)
-
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JulioAPeraza/2025-ohbm-ibma-neurovault/main?filepath=notebooks%2Ftutorial.ipynb)
 
 Materials for the OHBM 2025 IBMA with NeuroVault tutorial
