@@ -5,91 +5,6 @@ from nilearn.image import concat_imgs, resample_to_img
 from scipy.stats import pearsonr
 
 
-def _rm_nonstat_maps(data_df, verbose=0):
-    """
-    Remove non-statistical maps from a dataset.
-
-    Notes
-    -----
-    This function requires the dataset to have a metadata field called
-    "image_name" and "image_file".
-    """
-    sel_ids = []
-    for _, row in data_df.iterrows():
-        image_name = row["name"].lower()
-        file_name = row["file"].lower()
-
-        exclude = False
-        for term in [
-            "ica",
-            "pca",
-            "ppi",
-            "seed",
-            "functional connectivity",
-            "correlation",
-        ]:
-            if term in image_name:
-                exclude = True
-                if verbose > 0:
-                    print(f"Removing {row['id']}, term {term} in image name")
-                break
-
-        if "cope" in file_name and (
-            "zstat" not in file_name and "tstat" not in file_name
-        ):
-            exclude = True
-            if verbose > 0:
-                print(f"Removing {row['id']}, term 'cope' in file name")
-
-        if "tfce" in file_name:
-            if verbose > 0:
-                print(f"Removing {row['id']}, term 'tfce' in file name")
-            exclude = True
-
-        if not exclude:
-            sel_ids.append(row["id"])
-
-    data_df = data_df[data_df["id"].isin(sel_ids)]
-    data_df = data_df.reset_index()
-    return data_df
-
-
-def _rm_extreme_maps(data_df, zmin=1.96, z_max=50, verbose=0):
-    outliers_ids = []
-    for _, row in data_df.iterrows():
-        img = nib.load(row["path"])
-        data = img.get_fdata()
-        max_val = np.max(data)
-        min_val = np.min(data)
-
-        # Catch any inverted p-value, effect size or correlation maps
-        if max_val < zmin and min_val > -zmin:
-            outliers_ids.append(row["id"])
-            if verbose > 0:
-                print(f"Removing {row['id']}, possible effect size or correlation map")
-            continue
-
-        # Catch any map with extreme values
-        if max_val > z_max or min_val < -z_max:
-            outliers_ids.append(row["id"])
-            if verbose > 0:
-                print(f"Removing {row['id']}, possible map with extreme values")
-            continue
-
-        # Catch any map with all positive or all negative values
-        if ((data > 0).sum() == len(data)) or ((data < 0).sum() == len(data)):
-            outliers_ids.append(row["id"])
-            if verbose > 0:
-                print(
-                    f"Removing {row['id']}, map with all positive or all negative values"
-                )
-            continue
-
-    data_df = data_df[~data_df["id"].isin(outliers_ids)]
-    data_df = data_df.reset_index()
-    return data_df
-
-
 def _get_data(dset, imtype="z"):
     """Get data from a Dataset object.
 
@@ -122,6 +37,94 @@ def _get_data(dset, imtype="z"):
     return masker.transform(img4d)
 
 
+def _rm_nonstat_maps(dset, verbose=0):
+    """
+    Remove non-statistical maps from a dataset.
+
+    Notes
+    -----
+    This function requires the dataset to have a metadata field called
+    "image_name" and "image_file".
+    """
+    new_dset = dset.copy()
+    data_df = dset.metadata
+
+    sel_ids = []
+    for _, row in data_df.iterrows():
+        image_name = row["name"].lower()
+        file_name = row["file"].lower()
+
+        exclude = False
+        for term in [
+            "ica",
+            "pca",
+            "ppi",
+            "seed",
+            "functional connectivity",
+            "correlation",
+        ]:
+            if term in image_name:
+                exclude = True
+                if verbose > 0:
+                    print(f"Removing {row['id']}, term {term} in image name")
+                break
+
+        if "cope" in file_name and ("zstat" not in file_name and "tstat" not in file_name):
+            exclude = True
+            if verbose > 0:
+                print(f"Removing {row['id']}, term 'cope' in file name")
+
+        if "tfce" in file_name:
+            if verbose > 0:
+                print(f"Removing {row['id']}, term 'tfce' in file name")
+            exclude = True
+
+        if not exclude:
+            sel_ids.append(row["id"])
+
+    new_dset = new_dset.slice(sel_ids)
+    new_dset.metadata = new_dset.metadata.reset_index()
+    return new_dset
+
+
+def _rm_extreme_maps(dset, zmin=1.96, z_max=50, verbose=0):
+    new_dset = dset.copy()
+    data = _get_data(dset, imtype="z")
+
+    outliers_ids = []
+    for img_i, img in enumerate(data):
+        max_val = np.nanmax(img)
+        min_val = np.min(img)
+        img_id = dset.ids[img_i]
+
+        # Catch any inverted p-value, effect size or correlation maps
+        if max_val < zmin and min_val > -zmin:
+            outliers_ids.append(img_id)
+            if verbose > 0:
+                print(f"Removing {img_id}, possible effect size or correlation map")
+            continue
+
+        # Catch any map with extreme values
+        if max_val > z_max or min_val < -z_max:
+            outliers_ids.append(img_id)
+            if verbose > 0:
+                print(f"Removing {img_id}, possible map with extreme values")
+            continue
+
+        # Catch any map with all positive or all negative values
+        if ((data > 0).sum() == len(data)) or ((data < 0).sum() == len(data)):
+            outliers_ids.append(img_id)
+            if verbose > 0:
+                print(f"Removing {img_id}, map with all positive or all negative values")
+            continue
+
+    sel_ids = np.setdiff1d(dset.ids, outliers_ids)
+
+    new_dset = new_dset.slice(sel_ids)
+    new_dset.metadata = new_dset.metadata.reset_index()
+    return new_dset
+
+
 def _rm_duplicates_maps(dset, verbose=0):
     new_dset = dset.copy()
     data = _get_data(dset, imtype="z")
@@ -152,18 +155,20 @@ def _rm_duplicates_maps(dset, verbose=0):
                     sel_ids.append(ids[data_i])
                     ecl_ids.append(ids[data_j])
                     if verbose > 0:
-                        print(
-                            f"Removing {ids[data_j]}, possible duplicate of {ids[data_i]}"
-                        )
+                        print(f"Removing {ids[data_j]}, possible duplicate of {ids[data_i]}")
                 else:
                     sel_ids.append(ids[data_j])
                     ecl_ids.append(ids[data_i])
                     if verbose > 0:
-                        print(
-                            f"Removing {ids[data_i]}, possible duplicate of {ids[data_j]}"
-                        )
+                        print(f"Removing {ids[data_i]}, possible duplicate of {ids[data_j]}")
 
         if (ids[data_i] not in sel_ids) and (ids[data_i] not in ecl_ids):
             sel_ids.append(ids[data_i])
 
     return new_dset.slice(sel_ids)
+
+
+def remove_outliers(dset, zmin=1.96, z_max=50, verbose=0):
+    dset = _rm_nonstat_maps(dset, verbose=verbose)
+    dset = _rm_extreme_maps(dset, zmin=zmin, z_max=z_max, verbose=verbose)
+    return _rm_duplicates_maps(dset, verbose=verbose)

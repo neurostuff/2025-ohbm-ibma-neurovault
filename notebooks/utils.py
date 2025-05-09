@@ -57,22 +57,67 @@ def download_images(image_ids, output_directory):
     return pd.DataFrame(image_info_dict)
 
 
-def convert_to_nimare_dataset(images_df):
+def convert_to_nimare_dataset(
+    images_df,
+    study_col,
+    contrast_col,
+    sample_size_col,
+    map_type_col,
+    path_col,
+    metadata_cols,
+):
+    """
+    Convert a DataFrame containing neuroimaging data into a NiMARE Dataset object.
+
+    This function processes a DataFrame of neuroimaging data and transforms it into a
+    nested dictionary structure, and then use to create a NiMARE Dataset object.
+
+    Parameters
+    ----------
+    images_df : pandas.DataFrame
+        DataFrame containing neuroimaging data with columns for study identifiers,
+        contrast identifiers, map types, file paths, sample sizes, and other metadata.
+    study_col : str
+        Name of the column in images_df that contains study identifiers.
+    contrast_col : str
+        Name of the column in images_df that contains contrast identifiers.
+    sample_size_col : str
+        Name of the column in images_df that contains sample size information.
+    map_type_col : str
+        Name of the column in images_df that contains map type information.
+        The map_type should be compatible with the DEFAULT_MAP_TYPE_CONVERSION
+        dictionary which maps between common map type names and NiMARE's naming conventions
+    path_col : str
+        Name of the column in images_df that contains absolute path to each image.
+    metadata_cols : list of str
+        List of column names in images_df to include as metadata in the dataset.
+
+    Returns
+    -------
+    :obj:`~nimare.dataset.Dataset`
+        Dataset object containing experiment information from DataFrame.
+    """
     dataset_dict = {}
     for _, image in images_df.iterrows():
-        id_ = image["id"]
-        new_contrast_name = f"{id_}-1"
-        map_type = f"{image['map_type']} map"
+        col_id = image[study_col]
+        img_id = image[contrast_col]
 
-        if id_ not in dataset_dict:
-            dataset_dict[id_] = {}
+        map_type = f"{image[map_type_col]} map"
 
-        if "contrasts" not in dataset_dict[id_]:
-            dataset_dict[id_]["contrasts"] = {}
+        if col_id not in dataset_dict:
+            dataset_dict[col_id] = {}
 
-        dataset_dict[id_]["contrasts"][new_contrast_name] = {
-            "metadata": {"sample_sizes": [image["number_of_subjects"]]},
-            "images": {DEFAULT_MAP_TYPE_CONVERSION[map_type]: image["path"]},
+        if "contrasts" not in dataset_dict[col_id]:
+            dataset_dict[col_id]["contrasts"] = {}
+
+        # Add all metadata columns to the metadata dictionary
+        metadata = {"sample_sizes": [image[sample_size_col]]}
+        for col in metadata_cols:
+            metadata[col] = image[col]
+
+        dataset_dict[col_id]["contrasts"][img_id] = {
+            "metadata": metadata,
+            "images": {DEFAULT_MAP_TYPE_CONVERSION[map_type]: image[path_col]},
         }
 
     dset = Dataset(dataset_dict)
