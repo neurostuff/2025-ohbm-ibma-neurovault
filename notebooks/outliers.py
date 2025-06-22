@@ -87,7 +87,7 @@ def _rm_nonstat_maps(dset, verbose=0):
     return new_dset
 
 
-def _rm_extreme_maps(dset, zmin=1.96, z_max=50, verbose=0):
+def _rm_extreme_maps(dset, zmin=1.96, zmax=30, verbose=0):
     new_dset = dset.copy()
     data = _get_data(dset, imtype="z")
 
@@ -105,7 +105,7 @@ def _rm_extreme_maps(dset, zmin=1.96, z_max=50, verbose=0):
             continue
 
         # Catch any map with extreme values
-        if max_val > z_max or min_val < -z_max:
+        if max_val > zmax or min_val < -zmax:
             outliers_ids.append(img_id)
             if verbose > 0:
                 print(f"Removing {img_id}, possible map with extreme values")
@@ -168,7 +168,7 @@ def _rm_duplicates_maps(dset, verbose=0):
     return new_dset.slice(sel_ids)
 
 
-def remove_outliers(dset, zmin=1.96, z_max=50, verbose=0):
+def remove_outliers(dset, zmin=1.96, zmax=50, verbose=0):
     dset = _rm_nonstat_maps(dset, verbose=verbose)
-    dset = _rm_extreme_maps(dset, zmin=zmin, z_max=z_max, verbose=verbose)
+    dset = _rm_extreme_maps(dset, zmin=zmin, zmax=zmax, verbose=verbose)
     return _rm_duplicates_maps(dset, verbose=verbose)
