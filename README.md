@@ -17,7 +17,7 @@ You must have git, Python >= 3.8, and bash.
 1. **Clone this repo** by pasting this in a bash terminal:
 
 ```bash
-git clone https://github.com/JulioAPeraza/2025-ohbm-ibma-neurovault.git
+git clone https://github.com/neurostuff/2025-ohbm-ibma-neurovault.git
 ```
 
 2. **Create a virtual environment** with the dependencies needed to run the notebook:
